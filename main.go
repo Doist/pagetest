@@ -20,6 +20,7 @@ import (
 	"net/http/httptrace"
 	"net/url"
 	"os"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -165,6 +166,7 @@ func doRequest(ctx context.Context, method, url string) (*timings, *http.Respons
 		TLSHandshakeDone:     func(_ tls.ConnectionState, _ error) { tlsDone = time.Now() },
 	}
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
+	req.Header.Set("User-Agent", userAgent)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, nil, err
@@ -223,6 +225,16 @@ func extractLinks(r io.Reader) ([]string, error) {
 			}
 		}
 	}
+}
+
+var userAgent = "github.com/Doist/pagetest (unknown version)"
+
+func init() {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	userAgent = info.Main.Path + " " + info.Main.Version
 }
 
 //go:generate usagegen -autohelp
