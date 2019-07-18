@@ -1,0 +1,10 @@
+Command pagetest fetches provided url and all linked resources, printing
+diagnostic timings.
+
+pagetest first fetches html page at given url, then parses html, extracting
+absolute urls from <link>, <script>, <img> tag attributes, then issues HEAD
+requests to these urls and reports timings and response codes for all
+requests done.
+
+On certain requests for the same domain some of the reported timings may be
+zero, this is a result of connection reuse.
