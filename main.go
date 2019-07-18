@@ -97,6 +97,9 @@ func run(args runArgs) error {
 		Host:   resp.Request.URL.Host,
 		Path:   resp.Request.URL.Path,
 	}
+	if orig.Path == "" {
+		orig.Path = "/"
+	}
 	links := cand[:0]
 	for _, s := range cand {
 		if !strings.HasPrefix(s, "https://") && !strings.HasPrefix(s, "http://") {
