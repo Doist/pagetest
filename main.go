@@ -31,8 +31,9 @@ import (
 )
 
 func main() {
-	args := runArgs{}
+	args := runArgs{Timeout: time.Minute}
 	flag.StringVar(&args.URL, "url", args.URL, "url to check")
+	flag.DurationVar(&args.Timeout, "t", args.Timeout, "global timeout")
 	flag.Parse()
 	if err := run(args); err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
@@ -41,16 +42,23 @@ func main() {
 }
 
 type runArgs struct {
-	URL string
+	URL     string
+	Timeout time.Duration
 }
 
 func run(args runArgs) error {
+	ctx := context.Background()
+	if args.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, args.Timeout)
+		defer cancel()
+	}
 	twr := tabwriter.NewWriter(os.Stdout, 0, 8, 1, ' ', 0)
 	defer twr.Flush()
 	if args.URL == "" {
 		return fmt.Errorf("empty url")
 	}
-	ts, resp, err := doRequest(context.Background(), http.MethodGet, args.URL)
+	ts, resp, err := doRequest(ctx, http.MethodGet, args.URL)
 	if err != nil {
 		return err
 	}
@@ -109,7 +117,7 @@ func run(args runArgs) error {
 			defer wg.Done()
 			for s := range ch {
 				ts, err := func(s string) (*timings, error) {
-					ts, resp, err := doRequest(context.Background(), http.MethodHead, s)
+					ts, resp, err := doRequest(ctx, http.MethodHead, s)
 					if err != nil {
 						return nil, err
 					}
