@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"text/tabwriter"
 	"time"
 
@@ -111,6 +112,7 @@ func run(args runArgs) error {
 	}
 	ch := make(chan string)
 	var wg sync.WaitGroup
+	var errCnt uint32
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
 		go func() {
@@ -128,6 +130,7 @@ func run(args runArgs) error {
 				case nil:
 					report(s, resp.StatusCode, ts)
 				default:
+					atomic.AddUint32(&errCnt, 1)
 					fmt.Fprintf(os.Stderr, "%s\t%v\n", s, err)
 				}
 			}
@@ -138,6 +141,9 @@ func run(args runArgs) error {
 	}
 	close(ch)
 	wg.Wait()
+	if errCnt > 0 {
+		return fmt.Errorf("fetch failures: %d", errCnt)
+	}
 	return nil
 }
 
