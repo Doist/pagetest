@@ -11,11 +11,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptrace"
 	"net/url"
@@ -36,6 +38,7 @@ func main() {
 	args := runArgs{Timeout: time.Minute}
 	flag.StringVar(&args.URL, "url", args.URL, "url to check")
 	flag.DurationVar(&args.Timeout, "t", args.Timeout, "global timeout")
+	flag.BoolVar(&args.Dump, "dump", args.Dump, "save results to file instead of printing it")
 	flag.Parse()
 	if err := run(args); err != nil {
 		os.Stderr.WriteString(err.Error() + "\n")
@@ -46,16 +49,36 @@ func main() {
 type runArgs struct {
 	URL     string
 	Timeout time.Duration
+	Dump    bool
 }
 
 func run(args runArgs) error {
+	var stdout io.Writer = os.Stdout
+	var stderr io.Writer = os.Stderr
+	if args.Dump {
+		buf := new(lockedBuf)
+		stdout = buf
+		stderr = buf
+		defer func(buf *lockedBuf) {
+			f, err := ioutil.TempFile(".", "pagetest-out-*.txt")
+			if err != nil {
+				return
+			}
+			if _, err := f.Write(buf.Bytes()); err != nil {
+				return
+			}
+			if f.Close() == nil {
+				fmt.Fprintln(os.Stderr, "output saved to", f.Name())
+			}
+		}(buf)
+	}
 	ctx := context.Background()
 	if args.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, args.Timeout)
 		defer cancel()
 	}
-	twr := tabwriter.NewWriter(os.Stdout, 0, 8, 1, ' ', 0)
+	twr := tabwriter.NewWriter(stdout, 0, 8, 1, ' ', 0)
 	defer twr.Flush()
 	if args.URL == "" {
 		return fmt.Errorf("empty url")
@@ -135,7 +158,7 @@ func run(args runArgs) error {
 					report(s, resp.StatusCode, ts)
 				default:
 					atomic.AddUint32(&errCnt, 1)
-					fmt.Fprintf(os.Stderr, "%s\t%v\n", s, err)
+					fmt.Fprintf(stderr, "%s\t%v\n", s, err)
 				}
 			}
 		}()
@@ -228,6 +251,17 @@ func extractLinks(r io.Reader) ([]string, error) {
 			}
 		}
 	}
+}
+
+type lockedBuf struct {
+	mu sync.Mutex
+	bytes.Buffer
+}
+
+func (b *lockedBuf) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.Buffer.Write(p)
 }
 
 var userAgent = "github.com/Doist/pagetest (unknown version)"
