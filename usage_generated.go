@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	const usage = "Command pagetest fetches provided url and all linked resources, printing\ndiagnostic timings.\n\npagetest first fetches html page at given url, then parses html, extracting\nabsolute urls from <link>, <script>, <img> tag attributes, then issues HEAD\nrequests to these urls and reports timings and response codes for all requests\ndone.\n\nOn certain requests for the same domain some of the reported timings may be\nzero, this is a result of connection reuse.\n"
+	const usage = "Command pagetest fetches provided url and all linked resources, printing\ndiagnostic timings.\n\npagetest first fetches html page at given url, then parses html, extracting urls\nfrom <link>, <script>, <img> tag attributes, then issues HEAD requests to these\nurls and reports timings and response codes for all requests done.\n\nOn certain requests for the same domain some of the reported timings may be\nzero, this is a result of connection reuse.\n"
 	flag.Usage = func() {
 		fmt.Fprintln(flag.CommandLine.Output(), usage)
 		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", filepath.Base(os.Args[0]))

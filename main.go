@@ -2,9 +2,8 @@
 // diagnostic timings.
 //
 // pagetest first fetches html page at given url, then parses html, extracting
-// absolute urls from <link>, <script>, <img> tag attributes, then issues HEAD
-// requests to these urls and reports timings and response codes for all
-// requests done.
+// urls from <link>, <script>, <img> tag attributes, then issues HEAD requests
+// to these urls and reports timings and response codes for all requests done.
 //
 // On certain requests for the same domain some of the reported timings may be
 // zero, this is a result of connection reuse.
@@ -125,17 +124,24 @@ func run(args runArgs) error {
 	}
 	links := cand[:0]
 	for _, s := range cand {
-		if !strings.HasPrefix(s, "https://") && !strings.HasPrefix(s, "http://") {
-			continue
-		}
 		u, err := url.Parse(s)
 		if err != nil {
 			continue
 		}
+		switch u.Scheme {
+		default:
+			continue
+		case "http", "https":
+		case "":
+			u.Scheme = orig.Scheme
+			if u.Host == "" {
+				u.Host = orig.Host
+			}
+		}
 		if u.Scheme == orig.Scheme && u.Host == orig.Host && u.Path == orig.Path {
 			continue
 		}
-		links = append(links, s)
+		links = append(links, u.String())
 	}
 	ch := make(chan string)
 	var wg sync.WaitGroup
