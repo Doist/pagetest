@@ -59,7 +59,7 @@ func run(args runArgs) error {
 		stdout = buf
 		stderr = buf
 		defer func(buf *lockedBuf) {
-			f, err := ioutil.TempFile(".", "pagetest-out-*.txt")
+			f, err := ioutil.TempFile(".", "pagetest-report-*.txt")
 			if err != nil {
 				return
 			}
